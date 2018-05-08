@@ -58,6 +58,7 @@ def train(model, train_loader, epochs, loss_fns, opt, validation_loader=None, pa
             if acc_history[epoch] > best_val_acc:
                 best_val_acc = acc_history[epoch]
                 patience_counter = 0
+                torch.save(model, './caps_best_model.pth')
             else:
                 patience_counter += 1
                 if patience_counter > patience:
@@ -77,7 +78,7 @@ def evaluate_model(model, data_loader, num_samples):
             images = images.to(device)
             targets = targets.to(device)
 
-            log_probs = model(images)
+            log_probs, _ = model(images)
             predictions = F.softmax(log_probs, dim=-1)
             predictions = predictions.max(dim=-1)[1]
             hits += (predictions == targets).sum().item()
@@ -136,6 +137,9 @@ if __name__ == '__main__':
 
     loss_history, acc_history = train(capsnet, train_loader, epochs, loss_fns, optimizer,
                                       val_loader, patience, reconstruction_loss)
+
+    if patience:
+        capsnet = torch.load('./caps_best_model.pth')
 
     evaluation = evaluate_model(capsnet, test_loader, len(test_data))
 

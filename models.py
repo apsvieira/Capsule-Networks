@@ -206,7 +206,6 @@ class CapsNet(nn.Module):
         while len(out.shape) > 2:
             out = torch.norm(out, dim=-1)
 
-
         decoder_out = self.decoder(out)
 
         return out, decoder_out
