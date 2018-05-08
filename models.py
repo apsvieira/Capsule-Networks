@@ -1,9 +1,18 @@
+from collections import OrderedDict
+
 import torch
-import torch.functional as F
+import torch.nn.functional as F
 from torch import nn
+from utils import squash
 
 
 class BaseLine (nn.Module):
+    """
+    Baseline CNN as described in Sabour et al., 2017. From section 5 of the paper:
+    'The baseline is a standard CNN with three convolutional layers of 256, 256, 128 channels. Each has 5x5 kernels
+     and stride of 1. The last convolutional layers are followed by two fully connected layers of size 328, 192.
+     The last fully connected layer is connected with dropout to a 10 class softmax layer with cross entropy loss.'
+    """
     def __init__(self, image_channels=1):
         super(BaseLine, self).__init__()
 
@@ -66,7 +75,7 @@ class CapsuleLayer(nn.Module):
     def forward(self, inputs):
         """
         Decide between applying routing or plain convolutions.
-        Routing is only used if between 2 consecutive layers
+        Routing is only used between 2 consecutive layers.
         TODO try to implement routing as a method of the network and not the layers
         """
         if self.routing:
@@ -76,8 +85,7 @@ class CapsuleLayer(nn.Module):
 
     def _routing(self, inputs):
         """
-        TODO add doc
-        This function is probably rather heavy. Should try profiling.
+        TODO This function is probably rather heavy. Should try profiling.
         """
         batch_size = inputs.data.shape[0]
         weights = torch.stack([self.weights] * batch_size, dim=0)
@@ -86,7 +94,7 @@ class CapsuleLayer(nn.Module):
         current_votes = torch.stack([current_votes] * self.num_units, dim=2)
         current_votes = torch.stack([current_votes] * self.channels_per_unit, dim=-1)
 
-        logits = Variable(torch.zeros(current_votes.data.shape))
+        logits = torch.zeros_like(current_votes)
         pondered_votes = weights * current_votes  # Uji
 
         for iteration in range(self.routing_iterations):
@@ -115,8 +123,30 @@ class CapsNet(nn.Module):
                  num_classes=10, digits_dim=16, dense_units_1=512, dense_units_2=1024, dense_units_3=784,
                  routing_iterations=1):
         """
-        TODO Add very long doc for this...
+        Architecture for Capsule Networks as described in Sabour et al, 2017.
+        Default values are defined by the paper's specifications for the MNIST experiments.
+        WARNING The decoder is currently not used.
+
+        Parameters
+        ----------
+        conv_in_channels : int, number of input channels for convolutional layer. Number of channels in image.
+        conv_out_channels : int, number of output channels for convolutional layer.
+        conv_kernel_size : int or tuple, kernel size for convolutional layer in each dimension.
+        conv_stride : int or tuple, stride for convolutional layer in each dimension.
+        primary_units : int, number of units in primary capsule layer.
+        primary_dim : int, number of dimensions in primary caps layer, default 8D.
+        primary_kernel_size: int or tuple, kernel size for primary caps convolutions.
+        primary_stride : int or tuple, stride for primary caps convolutions.
+        num_classes : int, number of classes in the data. Determines number of units in Digits (Class) Caps.
+        digits_dim : int, number of dimensions in output caps layer, default 16D.
+        dense_units_1 : int, TODO
+        dense_units_2 : int, TODO
         dense_units_3 : int, number of pixels in an input image
+
+        Returns
+        -------
+        out : Tensor, log-probabilities of each class for all inputs in a batch.
+        decoder_out : Tensor, reconstructed image for a given `out`.
         """
         super(CapsNet, self).__init__()
         self.conv0 = nn.Conv2d(in_channels=conv_in_channels,
@@ -140,7 +170,7 @@ class CapsNet(nn.Module):
                                         routing=True,
                                         routing_iterations=routing_iterations)
         self.decoder = nn.Sequential(OrderedDict([
-                                                  ('decoder1', nn.Linear(num_classes * digits_dim, dense_units_1)),
+                                                  ('decoder1', nn.Linear(num_classes, dense_units_1)),
                                                   ('relu1', nn.ReLU()),
                                                   ('decoder2', nn.Linear(dense_units_1, dense_units_2)),
                                                   ('relu2', nn.ReLU()),
@@ -152,11 +182,13 @@ class CapsNet(nn.Module):
         """
         Receives batch of images and outputs log probabilities of each class for each image in the batch.
 
-        Parameters:
-            images : Variable containing Tensor of shape (batch_size, num_channels, H, W)
+        Parameters
+        ----------
+            images : Tensor of shape (batch_size, num_channels, H, W). Batch of images.
 
-        Returns:
-            out : Variable containing Tensor of shape(batch_size, num_classes
+        Returns
+        -------
+            out : Tensor of shape(batch_size, num_classes).
         """
         batch_size = images.shape[0]
 
@@ -174,4 +206,7 @@ class CapsNet(nn.Module):
         while len(out.shape) > 2:
             out = torch.norm(out, dim=-1)
 
-        return out
+
+        decoder_out = self.decoder(out)
+
+        return out, decoder_out
