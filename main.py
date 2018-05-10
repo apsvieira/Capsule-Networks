@@ -1,4 +1,5 @@
 import argparse
+import pandas as pd
 
 import torch
 import torch.nn.functional as F
@@ -50,7 +51,6 @@ def train(model, train_loader, epochs, loss_fns, opt, validation_loader=None, pa
 
         loss_history[epoch] = loss_sum / len(train_loader)
         print('Loss in epoch {}: {}'.format(epoch + 1, loss_history[epoch]))
-        torch.save(model, './caps_epoch{}.pth'.format(epoch))
         if patience:
             acc_history[epoch] = evaluate_model(model, validation_loader,
                                                 len(validation_loader) * validation_loader.batch_size)
@@ -142,6 +142,11 @@ if __name__ == '__main__':
         capsnet = torch.load('./caps_best_model.pth')
 
     evaluation = evaluate_model(capsnet, test_loader, len(test_data))
+
+    df = pd.DataFrame(data={'val_accuracy': acc_history, 'train_loss': loss_history})
+    df.to_csv('./metrics.csv')
+    with open('./final_loss.txt', 'w') as f:
+        f.write(str(evaluation))
 
     print(evaluation*100)
 
