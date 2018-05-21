@@ -3,16 +3,19 @@ import numpy as np
 
 
 def squash(tensor):
-    '''
-    TODO test
-    Squash function, defined in [1]. Works as a nonlinearity for CapsNets.
+    """
+    Squash function, defined in [1]. Works as a non-linearity for CapsNets.
     Input tensor will be of format (bs, units, C, H, W) or (bs, units, C)
     Norm should be computed on the axis representing the number of units.
-    params:
-        tensor:    torch Variable containing n-dimensional tensor
-    output:
+
+    Parameters
+    ----------
+        tensor :    torch Variable containing n-dimensional tensor
+
+    Returns
+    -------
         (||tensor||^2 / (1+ ||tensor||^2)) * tensor/||tensor||
-    '''
+    """
     norm = torch.norm(tensor, p=2, dim=1, keepdim=True)
     sq_norm = norm ** 2  # Avoid computing square twice
 
@@ -20,6 +23,18 @@ def squash(tensor):
 
 
 def split_indices(num_samples, validation_split):
+    """
+    Helper function to randomly split a list of indices.
+
+    Parameters
+    ----------
+        num_samples : int, Total number of samples in list.
+        validation_split : float, Fraction of the set to be reserved for validation.
+
+    Returns
+    -------
+        train_idx, val_idx : lists of integer indices.
+    """
     split_idx = int(validation_split * num_samples)
     indices = np.arange(num_samples)
     np.random.shuffle(indices)

@@ -2,6 +2,9 @@ import torch
 
 
 class MarginLoss:
+    """
+    TODO add docstring
+    """
     def __init__(self, upper_margin=0.9, lower_margin=0.1, lamb=0.5):
         self.upper_margin = upper_margin
         self.lower_margin = lower_margin
