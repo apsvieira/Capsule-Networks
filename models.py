@@ -30,7 +30,6 @@ class BaseLine (nn.Module):
         out = out.view(out.shape[0], -1)
         out = F.relu(self.dense1(out), inplace=False)
         out = F.dropout(F.relu(self.dense2(out), inplace=False), p=0.5)
-        out = F.softmax(self.dense3(out), dim=-1)
 
         return out
 
