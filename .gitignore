@@ -102,3 +102,6 @@ ENV/
 
 # PyCharm / IDEA files
 .idea
+
+# PyTorch datasets
+/datasets
