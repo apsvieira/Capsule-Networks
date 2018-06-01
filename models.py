@@ -39,7 +39,7 @@ class CapsuleLayer(nn.Module):
     TODO add very long doc
     """
     def __init__(self, input_units, input_channels, num_units, channels_per_unit,
-                 kernel_size, stride, routing, routing_iterations, device=None):
+                 kernel_size, stride, routing, routing_iterations):
 
         super(CapsuleLayer, self).__init__()
         self.input_units = input_units
@@ -50,7 +50,6 @@ class CapsuleLayer(nn.Module):
         self.stride = stride
         self.routing = routing
         self.routing_iterations = routing_iterations
-        self.device = device
 
         if self.routing:
             """
@@ -88,8 +87,6 @@ class CapsuleLayer(nn.Module):
         """
         batch_size = inputs.data.shape[0]
         weights = torch.stack([self.weights] * batch_size, dim=0)
-        if self.device:
-            .weights = weights.to(self.device)
         current_votes = inputs.permute([0, 2, 1])
         current_votes = torch.stack([current_votes] * self.num_units, dim=2)
         current_votes = torch.stack([current_votes] * self.channels_per_unit, dim=-1)
@@ -121,7 +118,7 @@ class CapsNet(nn.Module):
     def __init__(self, conv_in_channels=1, conv_out_channels=256, conv_kernel_size=9, conv_stride=1,
                  primary_units=32, primary_dim=8, primary_kernel_size=9, primary_stride=2,
                  num_classes=10, digits_dim=16, dense_units_1=512, dense_units_2=1024, dense_units_3=784,
-                 routing_iterations=1):
+                 routing_iterations=1, device=None):
         """
         Architecture for Capsule Networks as described in Sabour et al, 2017.
         Default values are defined by the paper's specifications for the MNIST experiments.
