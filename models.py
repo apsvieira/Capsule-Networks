@@ -39,7 +39,7 @@ class CapsuleLayer(nn.Module):
     TODO add very long doc
     """
     def __init__(self, input_units, input_channels, num_units, channels_per_unit,
-                 kernel_size, stride, routing, routing_iterations):
+                 kernel_size, stride, routing, routing_iterations, device=None):
 
         super(CapsuleLayer, self).__init__()
         self.input_units = input_units
@@ -50,6 +50,7 @@ class CapsuleLayer(nn.Module):
         self.stride = stride
         self.routing = routing
         self.routing_iterations = routing_iterations
+        self.device = device
 
         if self.routing:
             """
@@ -75,7 +76,6 @@ class CapsuleLayer(nn.Module):
         """
         Decide between applying routing or plain convolutions.
         Routing is only used between 2 consecutive layers.
-        TODO try to implement routing as a method of the network and not the layers
         """
         if self.routing:
             return self._routing(inputs)
@@ -88,7 +88,8 @@ class CapsuleLayer(nn.Module):
         """
         batch_size = inputs.data.shape[0]
         weights = torch.stack([self.weights] * batch_size, dim=0)
-
+        if self.device:
+            .weights = weights.to(self.device)
         current_votes = inputs.permute([0, 2, 1])
         current_votes = torch.stack([current_votes] * self.num_units, dim=2)
         current_votes = torch.stack([current_votes] * self.channels_per_unit, dim=-1)
