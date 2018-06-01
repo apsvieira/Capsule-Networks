@@ -59,13 +59,13 @@ class BaseLine (nn.Module):
 
             loss_history[epoch] = loss_sum / len(train_loader)
             print('Loss in epoch {}: {}'.format(epoch + 1, loss_history[epoch]))
-            torch.save(self, './caps_epoch{}.pth'.format(epoch))
             if patience:
                 acc_history[epoch] = self.evaluate_model(validation_loader,
                                                          len(validation_loader) * validation_loader.batch_size)
                 if acc_history[epoch] > best_val_acc:
                     best_val_acc = acc_history[epoch]
                     patience_counter = 0
+                    torch.save(self.state_dict(), './baseline_best_model.pth')
                 else:
                     patience_counter += 1
                     if patience_counter > patience:
@@ -305,7 +305,7 @@ class CapsNet(nn.Module):
                 if acc_history[epoch] > best_val_acc:
                     best_val_acc = acc_history[epoch]
                     patience_counter = 0
-                    torch.save(self.state_dict(), './caps_best_model.pth')
+                    torch.save(self.state_dict(), './capsnet_best_model.pth')
                 else:
                     patience_counter += 1
                     if patience_counter > patience:
