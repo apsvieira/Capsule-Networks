@@ -60,7 +60,7 @@ if __name__ == '__main__':
                                         num_workers=num_workers)
 
     # Instantiate default network
-    capsnet = CapsNet()
+    capsnet = CapsNet(device=device)
     capsnet = capsnet.to(device)
 
     optimizer = torch.optim.Adam(capsnet.parameters())

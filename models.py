@@ -146,6 +146,7 @@ class CapsNet(nn.Module):
         decoder_out : Tensor, reconstructed image for a given `out`.
         """
         super(CapsNet, self).__init__()
+        self.device = device
         self.conv0 = nn.Conv2d(in_channels=conv_in_channels,
                                out_channels=conv_out_channels,
                                kernel_size=conv_kernel_size,
@@ -219,6 +220,7 @@ class CapsNet(nn.Module):
             for i, data in enumerate(train_loader):
                 print('\rstarting batch #{:5.0f}\r'.format(i))
                 input, target = data
+                input, target = input.to(self.device), target.to(self.device)
 
                 opt.zero_grad()
                 log_probs, reconstructed_img = self(input)
