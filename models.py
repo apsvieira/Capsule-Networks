@@ -89,7 +89,7 @@ class BaseLine (nn.Module):
                 predictions = predictions.max(dim=-1)[1]
                 hits += (predictions == targets).sum().item()
 
-        model.train()
+        self.train()
         return hits / num_samples
 
 
@@ -305,7 +305,7 @@ class CapsNet(nn.Module):
                 if acc_history[epoch] > best_val_acc:
                     best_val_acc = acc_history[epoch]
                     patience_counter = 0
-                    torch.save(self, './caps_best_model.pth')
+                    torch.save(self.state_dict(), './caps_best_model.pth')
                 else:
                     patience_counter += 1
                     if patience_counter > patience:
