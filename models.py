@@ -333,6 +333,7 @@ class CapsNet(nn.Module):
         for i, data in enumerate(data_loader):
             images, targets = data
             with torch.no_grad():
+                images, targets = images.to(self.device), targets.to(self.device)
                 log_probs, _ = self(images)
                 predictions = F.softmax(log_probs, dim=-1)
                 predictions = predictions.max(dim=-1)[1]
