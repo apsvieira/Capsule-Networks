@@ -13,7 +13,7 @@ class BaseLine (nn.Module):
      and stride of 1. The last convolutional layers are followed by two fully connected layers of size 328, 192.
      The last fully connected layer is connected with dropout to a 10 class softmax layer with cross entropy loss.'
     """
-    def __init__(self, image_channels=1):
+    def __init__(self, image_channels=1, device=None):
         super(BaseLine, self).__init__()
 
         self.conv1 = nn.Conv2d(image_channels, 256, kernel_size=5, stride=1)
@@ -22,6 +22,7 @@ class BaseLine (nn.Module):
         self.dense1 = nn.Linear(16 * 16 * 128, 328)
         self.dense2 = nn.Linear(328, 192)
         self.dense3 = nn.Linear(192, 10)
+        self.device = device
 
     def forward(self, images):
         out = F.relu(self.conv1(images), inplace=False)
@@ -32,6 +33,64 @@ class BaseLine (nn.Module):
         out = F.dropout(F.relu(self.dense2(out), inplace=False), p=0.5)
 
         return out
+
+    def train_model(self, train_loader, epochs, loss_fn, optimizer, validation_loader=None, patience=None):
+        self.train()
+        loss_history = torch.zeros(epochs)
+        acc_history = torch.zeros(epochs)
+        best_val_acc = 0
+        patience_counter = 0
+
+        for epoch in range(epochs):
+            loss_sum = 0
+            for i, data in enumerate(train_loader):
+                print('starting batch #{:5.0f}'.format(i))
+                input, target = data
+                input, target = input.to(self.device), target.to(self.device)
+
+                optimizer.zero_grad()
+                log_probs = self(input)
+
+                loss = loss_fn(log_probs, target)
+                loss_sum += loss.item()
+
+                loss.backward()
+                optimizer.step()
+
+            loss_history[epoch] = loss_sum / len(train_loader)
+            print('Loss in epoch {}: {}'.format(epoch + 1, loss_history[epoch]))
+            torch.save(self, './caps_epoch{}.pth'.format(epoch))
+            if patience:
+                acc_history[epoch] = self.evaluate_model(validation_loader,
+                                                         len(validation_loader) * validation_loader.batch_size)
+                if acc_history[epoch] > best_val_acc:
+                    best_val_acc = acc_history[epoch]
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                    if patience_counter > patience:
+                        print("Early Stopping in epoch {}.".format(epoch))
+                        return loss_history, acc_history
+
+        return loss_history, acc_history
+
+    def evaluate_model(self, data_loader, num_samples):
+        hits = 0.0
+        self.eval()
+
+        for i, data in enumerate(data_loader):
+            images, targets = data
+            with torch.no_grad():
+                images = images.to(self.device)
+                targets = targets.to(self.device)
+
+                log_probs = self(images)
+                predictions = F.softmax(log_probs, dim=-1)
+                predictions = predictions.max(dim=-1)[1]
+                hits += (predictions == targets).sum().item()
+
+        model.train()
+        return hits / num_samples
 
 
 class CapsuleLayer(nn.Module):
@@ -230,7 +289,8 @@ class CapsNet(nn.Module):
                     loss += loss_fn(log_probs, target)
 
                 if reconstruction:
-                    loss += 0.0005 * reconstruction(reconstructed_img, target)
+                    bs = train_loader.batch_size
+                    loss += 0.0005 * reconstruction(reconstructed_img, input.view(bs, -1))
 
                 loss_sum += loss.item()
                 loss.backward()

@@ -7,7 +7,7 @@ import torchvision
 from torch import nn
 
 from loss_functions import MarginLoss
-from models import CapsNet
+from models import CapsNet, BaseLine
 from utils import split_indices
 
 parser = argparse.ArgumentParser()
@@ -16,16 +16,23 @@ parser.add_argument('--epochs', type=int, default=20)
 parser.add_argument('--patience', type=int, default=2)
 parser.add_argument('--num_workers', type=int, default=4)
 parser.add_argument('--reconstruction', type=bool, default=False)
+parser.add_argument('--model', type=str, default='capsnet')
 opts = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
+
+    model_selector = {
+        'capsnet': CapsNet,
+        'baseline': BaseLine
+    }
 
     epochs = opts.epochs
     batch_size = opts.batch_size
     num_workers = opts.num_workers
     patience = opts.patience
     reconstruction = opts.reconstruction
+    selected = opts.model
 
     validation_split = 0.2
     dataset = torchvision.datasets.MNIST
@@ -60,23 +67,29 @@ if __name__ == '__main__':
                                         num_workers=num_workers)
 
     # Instantiate default network
-    capsnet = CapsNet(device=device)
-    capsnet = capsnet.to(device)
+    model = model_selector[selected](device=device)
+    model = model.to(device)
 
-    optimizer = torch.optim.Adam(capsnet.parameters())
+    optimizer = torch.optim.Adam(model.parameters())
     class_loss = nn.CrossEntropyLoss()
     margin_loss = MarginLoss(0.9, 0.1, 0.5)
     reconstruction_loss = nn.MSELoss() if reconstruction else None
 
-    loss_fns = (class_loss, margin_loss)
-
-    loss_history, acc_history = capsnet.train_model(train_loader, epochs, loss_fns, optimizer,
-                                                    val_loader, patience, reconstruction_loss)
+    if selected == 'capsnet':
+        loss_fns = (class_loss, margin_loss)
+        loss_history, acc_history = model.train_model(train_loader, epochs, loss_fns, optimizer,
+                                                      val_loader, patience, reconstruction_loss)
+    elif selected == 'baseline':
+        loss_fns = class_loss
+        loss_history, acc_history = model.train_model(train_loader, epochs, loss_fns, optimizer,
+                                                      val_loader, patience)
+    else:
+        raise ValueError("Model selected is not supported. Please choose one of {}".format(model_selector.keys()))
 
     if patience:
         capsnet = torch.load('./caps_best_model.pth')
 
-    evaluation = capsnet.evaluate_model(test_loader, len(test_data))
+    evaluation = model.evaluate_model(test_loader, len(test_data))
 
     df = pd.DataFrame(data={'val_accuracy': acc_history, 'train_loss': loss_history})
     df.to_csv('./metrics.csv')
