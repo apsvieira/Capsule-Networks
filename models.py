@@ -175,7 +175,7 @@ class CapsNet(nn.Module):
                                                   ('relu2', nn.ReLU()),
                                                   ('decoder3', nn.Linear(dense_units_2, dense_units_3)),
                                                   ('decoder_out', nn.Sigmoid())
-                                                ]))
+                                                 ]))
 
     def forward(self, images):
         """
@@ -208,3 +208,75 @@ class CapsNet(nn.Module):
         decoder_out = self.decoder(out)
 
         return out, decoder_out
+
+    def train_model(self, train_loader, epochs, loss_fns, opt, validation_loader=None, patience=None, reconstruction=None):
+        self.train()
+        loss_history = torch.zeros(epochs)
+        acc_history = torch.zeros(epochs)
+        best_val_acc = 0
+        patience_counter = 0
+
+        for epoch in range(epochs):
+            loss_sum = 0
+            for i, data in enumerate(train_loader):
+                print('\rstarting batch #{:5.0f}\r'.format(i))
+                input, target = data
+
+                opt.zero_grad()
+                log_probs, reconstructed_img = self(input)
+
+                loss = 0
+                for loss_fn in loss_fns:
+                    loss += loss_fn(log_probs, target)
+
+                if reconstruction:
+                    loss += 0.0005 * reconstruction(reconstructed_img, target)
+
+                loss_sum += loss.item()
+                loss.backward()
+                opt.step()
+
+            loss_history[epoch] = loss_sum / len(train_loader)
+            print('Loss in epoch {}: {}'.format(epoch + 1, loss_history[epoch]))
+            if patience:
+                acc_history[epoch] = self.evaluate_model(validation_loader,
+                                                         len(validation_loader) * validation_loader.batch_size)
+                print('Validation loss in epoch {}: {}'.format(epoch + 1, acc_history[epoch]))
+                if acc_history[epoch] > best_val_acc:
+                    best_val_acc = acc_history[epoch]
+                    patience_counter = 0
+                    torch.save(self, './caps_best_model.pth')
+                else:
+                    patience_counter += 1
+                    if patience_counter > patience:
+                        print("Early Stopping in epoch {}.".format(epoch))
+                        return loss_history, acc_history
+
+        return loss_history, acc_history
+
+    def evaluate_model(self, data_loader, num_samples):
+        """
+        Model evaluation function. Calculates class accuracy.
+
+        Parameters
+        ----------
+            data_loader : DataLoader, contains evaluation data.
+            num_samples : Number of examples in evaluation dataset.
+
+        Returns
+        -------
+            Fraction of correct predictions.
+        """
+        hits = 0.0
+        self.eval()
+
+        for i, data in enumerate(data_loader):
+            images, targets = data
+            with torch.no_grad():
+                log_probs, _ = self(images)
+                predictions = F.softmax(log_probs, dim=-1)
+                predictions = predictions.max(dim=-1)[1]
+                hits += (predictions == targets).sum().item()
+
+        self.train()
+        return hits / num_samples

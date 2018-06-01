@@ -2,7 +2,6 @@ import argparse
 import pandas as pd
 
 import torch
-import torch.nn.functional as F
 import torch.utils.data as data_utils
 import torchvision
 from torch import nn
@@ -19,86 +18,6 @@ parser.add_argument('--num_workers', type=int, default=4)
 parser.add_argument('--reconstruction', type=bool, default=False)
 opts = parser.parse_args()
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-def train(model, train_loader, epochs, loss_fns, opt, validation_loader=None, patience=None, reconstruction=None):
-    model.train()
-    loss_history = torch.zeros(epochs)
-    acc_history = torch.zeros(epochs)
-    best_val_acc = 0
-    patience_counter = 0
-
-    for epoch in range(epochs):
-        loss_sum = 0
-        for i, data in enumerate(train_loader):
-            print('\rstarting batch #{:5.0f}\r'.format(i))
-            input, target = data
-            input, target = input.to(device), target.to(device)
-
-            opt.zero_grad()
-            log_probs, reconstructed_img = model(input)
-
-            loss = 0
-            for loss_fn in loss_fns:
-                loss += loss_fn(log_probs, target)
-
-            if reconstruction:
-                loss += 0.0005 * reconstruction(reconstructed_img, target)
-
-            loss_sum += loss.item()
-            loss.backward()
-            opt.step()
-
-        loss_history[epoch] = loss_sum / len(train_loader)
-        print('Loss in epoch {}: {}'.format(epoch + 1, loss_history[epoch]))
-        if patience:
-            acc_history[epoch] = evaluate_model(model, validation_loader,
-                                                len(validation_loader) * validation_loader.batch_size)
-            print('Validation loss in epoch {}: {}'.format(epoch + 1, acc_history[epoch]))
-            if acc_history[epoch] > best_val_acc:
-                best_val_acc = acc_history[epoch]
-                patience_counter = 0
-                torch.save(model, './caps_best_model.pth')
-            else:
-                patience_counter += 1
-                if patience_counter > patience:
-                    print("Early Stopping in epoch {}.".format(epoch))
-                    return loss_history, acc_history
-
-    return loss_history, acc_history
-
-
-def evaluate_model(model, data_loader, num_samples):
-    """
-    Model evaluation function. Calculates class accuracy.
-
-    Parameters
-    ----------
-        model : NN Module, model to be evaluated. Expects a model that outputs two objects.
-        data_loader : DataLoader, contains evaluation data.
-        num_samples : Number of examples in evaluation dataset.
-
-    Returns
-    -------
-        Fraction of correct predictions.
-    """
-    hits = 0.0
-    model.eval()
-
-    for i, data in enumerate(data_loader):
-        images, targets = data
-        with torch.no_grad():
-            images = images.to(device)
-            targets = targets.to(device)
-
-            log_probs, _ = model(images)
-            predictions = F.softmax(log_probs, dim=-1)
-            predictions = predictions.max(dim=-1)[1]
-            hits += (predictions == targets).sum().item()
-
-    model.train()
-    return hits / num_samples
-
 
 if __name__ == '__main__':
 
@@ -151,13 +70,13 @@ if __name__ == '__main__':
 
     loss_fns = (class_loss, margin_loss)
 
-    loss_history, acc_history = train(capsnet, train_loader, epochs, loss_fns, optimizer,
-                                      val_loader, patience, reconstruction_loss)
+    loss_history, acc_history = capsnet.train_model(train_loader, epochs, loss_fns, optimizer,
+                                                    val_loader, patience, reconstruction_loss)
 
     if patience:
         capsnet = torch.load('./caps_best_model.pth')
 
-    evaluation = evaluate_model(capsnet, test_loader, len(test_data))
+    evaluation = capsnet.evaluate_model(test_loader, len(test_data))
 
     df = pd.DataFrame(data={'val_accuracy': acc_history, 'train_loss': loss_history})
     df.to_csv('./metrics.csv')
