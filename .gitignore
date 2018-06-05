@@ -103,5 +103,9 @@ ENV/
 # PyCharm / IDEA files
 .idea
 
-# PyTorch datasets
+# PyTorch stuff
 /datasets
+*.pth
+
+# Nohup logs
+*nohup.out

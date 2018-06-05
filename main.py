@@ -91,7 +91,8 @@ if __name__ == '__main__':
         raise ValueError("Model selected is not supported. Please choose one of {}".format(model_selector.keys()))
 
     if patience:
-        model = model.load_state_dict(torch.load('./{}_best_model.pth'.format(selected)))
+        model.load_state_dict(torch.load('./{}_best_model.pth'.format(selected)))
+        print("Model loaded from previous best.")
 
     evaluation = model.evaluate_model(test_loader, len(test_data))
 
