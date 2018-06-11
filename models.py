@@ -13,7 +13,7 @@ class BaseLine (nn.Module):
      and stride of 1. The last convolutional layers are followed by two fully connected layers of size 328, 192.
      The last fully connected layer is connected with dropout to a 10 class softmax layer with cross entropy loss.'
     """
-    def __init__(self, image_channels=1, device=None):
+    def __init__(self, image_channels=1, routing_iterations=None, device=None):
         super(BaseLine, self).__init__()
 
         self.conv1 = nn.Conv2d(image_channels, 256, kernel_size=5, stride=1)
@@ -462,7 +462,7 @@ class CapsNetWithoutReconstruction(nn.Module):
                 if acc_history[epoch] > best_val_acc:
                     best_val_acc = acc_history[epoch]
                     patience_counter = 0
-                    torch.save(self.state_dict(), './capsnet_best_model.pth')
+                    torch.save(self.state_dict(), './capsnet_without_best_model.pth')
                 else:
                     patience_counter += 1
                     if patience_counter > patience:

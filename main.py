@@ -16,6 +16,7 @@ parser.add_argument('--epochs', type=int, default=20)
 parser.add_argument('--patience', type=int, default=2)
 parser.add_argument('--num_workers', type=int, default=4)
 parser.add_argument('--model', type=str, default='capsnet')
+parser.add_argument('--routing_iterations', type=int, default=1)
 opts = parser.parse_args()
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,6 +34,7 @@ if __name__ == '__main__':
     num_workers = opts.num_workers
     patience = opts.patience
     selected = opts.model
+    routing_iterations = opts.routing_iterations
 
     validation_split = 0.2
     dataset = torchvision.datasets.MNIST
@@ -67,7 +69,7 @@ if __name__ == '__main__':
                                         num_workers=num_workers)
 
     # Instantiate default network
-    model = model_selector[selected](device=device)
+    model = model_selector[selected](routing_iterations=routing_iterations, device=device)
     model = model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters())
