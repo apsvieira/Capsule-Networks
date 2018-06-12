@@ -182,7 +182,6 @@ class CapsNet(nn.Module):
         """
         Architecture for Capsule Networks as described in Sabour et al, 2017.
         Default values are defined by the paper's specifications for the MNIST experiments.
-        WARNING The decoder is currently not used.
 
         Parameters
         ----------
@@ -347,8 +346,7 @@ class CapsNet(nn.Module):
 class CapsNetWithoutReconstruction(nn.Module):
     def __init__(self, conv_in_channels=1, conv_out_channels=256, conv_kernel_size=9, conv_stride=1,
                  primary_units=32, primary_dim=8, primary_kernel_size=9, primary_stride=2,
-                 num_classes=10, digits_dim=16, dense_units_1=512, dense_units_2=1024, dense_units_3=784,
-                 routing_iterations=1, device=None):
+                 num_classes=10, digits_dim=16, routing_iterations=1, device=None):
         """
         Architecture for Capsule Networks as described in Sabour et al, 2017.
         Default values are defined by the paper's specifications for the MNIST experiments.
@@ -366,9 +364,6 @@ class CapsNetWithoutReconstruction(nn.Module):
         primary_stride : int or tuple, stride for primary caps convolutions.
         num_classes : int, number of classes in the data. Determines number of units in Digits (Class) Caps.
         digits_dim : int, number of dimensions in output caps layer, default 16D.
-        dense_units_1 : int, TODO
-        dense_units_2 : int, TODO
-        dense_units_3 : int, number of pixels in an input image
 
         Returns
         -------
