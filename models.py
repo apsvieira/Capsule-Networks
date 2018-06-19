@@ -96,7 +96,7 @@ class BaseLine (nn.Module):
 
 class CapsuleLayer(nn.Module):
     """
-    TODO add very long doc
+    Implementation of a Capsule layer, based on the CapsNet implementation from Sabour et al, 2017.
     """
     def __init__(self, input_units, input_channels, num_units, channels_per_unit,
                  kernel_size, stride, routing, routing_iterations):
